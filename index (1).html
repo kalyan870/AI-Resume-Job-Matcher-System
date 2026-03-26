@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume + Job Matcher System</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        :root{--bg:#0a0a0f;--surface:#12121a;--surface2:#1a1a2e;--border:#2a2a3e;--primary:#6c5ce7;--primary-light:#a29bfe;--accent:#00cec9;--accent2:#fd79a8;--success:#00b894;--warning:#fdcb6e;--danger:#e17055;--text:#e8e8f0;--text-dim:#8888a8;--text-muted:#55556a}
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+        .bg-grid{position:fixed;top:0;left:0;right:0;bottom:0;background-image:radial-gradient(circle at 20% 50%,rgba(108,92,231,.08)0%,transparent 50%),radial-gradient(circle at 80% 20%,rgba(0,206,201,.06)0%,transparent 50%),radial-gradient(circle at 50% 80%,rgba(253,121,168,.05)0%,transparent 50%);z-index:0}
+        .bg-grid::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background-image:linear-gradient(rgba(255,255,255,.02)1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02)1px,transparent 1px);background-size:60px 60px}
+        .container{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:20px}
+        .header{text-align:center;padding:40px 0 30px}
+        .header-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(108,92,231,.15);border:1px solid rgba(108,92,231,.3);border-radius:50px;padding:6px 16px;font-size:12px;color:var(--primary-light);margin-bottom:16px;letter-spacing:1px;text-transform:uppercase}
+        .header-badge .dot{width:6px;height:6px;background:var(--accent);border-radius:50%;animation:pulse 2s infinite}
+        @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.5)}}
+        .header h1{font-size:42px;font-weight:800;background:linear-gradient(135deg,#fff 0%,var(--primary-light)50%,var(--accent)100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:10px;line-height:1.2}
+        .header p{color:var(--text-dim);font-size:16px;max-width:600px;margin:0 auto}
+        .steps-bar{display:flex;justify-content:center;gap:8px;margin-bottom:32px;flex-wrap:wrap}
+        .step-pill{display:flex;align-items:center;gap:8px;padding:10px 20px;border-radius:50px;background:var(--surface);border:1px solid var(--border);font-size:13px;font-weight:600;color:var(--text-muted);transition:all .3s}
+        .step-pill.active{border-color:var(--primary);color:var(--primary-light);background:rgba(108,92,231,.1)}
+        .step-pill.done{border-color:var(--success);color:var(--success);background:rgba(0,184,148,.1)}
+        .step-pill .num{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:var(--surface2);border:1px solid var(--border)}
+        .step-pill.active .num{background:var(--primary);color:#fff;border-color:var(--primary)}
+        .step-pill.done .num{background:var(--success);color:#fff;border-color:var(--success)}
+        .step-arrow{color:var(--text-muted);font-size:18px;display:flex;align-items:center}
+        .main-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px}
+        .panel{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+        .panel-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);background:var(--surface2)}
+        .panel-header h2{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
+        .panel-header h2 .icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+        .resume-icon{background:rgba(108,92,231,.2)}.job-icon{background:rgba(0,206,201,.2)}
+        .panel-body{padding:20px}
+        .upload-zone{border:2px dashed var(--border);border-radius:12px;padding:30px 20px;text-align:center;cursor:pointer;transition:all .3s;position:relative;margin-bottom:12px}
+        .upload-zone:hover,.upload-zone.dragover{border-color:var(--primary);background:rgba(108,92,231,.05)}
+        .upload-zone .upload-icon{font-size:36px;margin-bottom:8px;display:block}
+        .upload-zone .upload-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}
+        .upload-zone .upload-hint{font-size:12px;color:var(--text-muted)}
+        .upload-zone input[type="file"]{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer}
+        .upload-zone.has-file{border-color:var(--success);background:rgba(0,184,148,.05)}
+        .file-info{display:none;align-items:center;gap:10px;padding:10px 14px;background:var(--bg);border-radius:10px;margin-bottom:12px;font-size:13px}
+        .file-info.visible{display:flex}
+        .file-info .file-name{flex:1;font-weight:600;color:var(--success)}
+        .file-info .remove-btn{background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;padding:4px}
+        .or-divider{text-align:center;color:var(--text-muted);font-size:12px;margin:12px 0;position:relative}
+        .or-divider::before,.or-divider::after{content:'';position:absolute;top:50%;width:calc(50% - 20px);height:1px;background:var(--border)}
+        .or-divider::before{left:0}.or-divider::after{right:0}
+        .text-area{width:100%;min-height:200px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:16px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;line-height:1.7;resize:vertical;transition:border-color .2s}
+        .text-area:focus{outline:none;border-color:var(--primary)}
+        .text-area::placeholder{color:var(--text-muted)}
+        .job-list{display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto;padding-right:4px}
+        .job-card{padding:14px 16px;background:var(--bg);border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:all .2s}
+        .job-card:hover{border-color:var(--accent);transform:translateX(4px)}
+        .job-card.selected{border-color:var(--accent);background:rgba(0,206,201,.08);box-shadow:0 0 0 1px var(--accent)}
+        .job-card .job-title{font-size:14px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+        .job-card .job-company{font-size:12px;color:var(--text-dim);margin-bottom:6px}
+        .job-card .job-tags{display:flex;flex-wrap:wrap;gap:4px}
+        .job-tag{font-size:10px;padding:2px 8px;border-radius:4px;background:var(--surface2);color:var(--text-dim);border:1px solid var(--border)}
+        .job-card.selected .job-tag{background:rgba(0,206,201,.1);border-color:rgba(0,206,201,.3);color:var(--accent)}
+        .radio-dot{width:16px;height:16px;border-radius:50%;border:2px solid var(--border);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s}
+        .job-card.selected .radio-dot{border-color:var(--accent)}
+        .job-card.selected .radio-dot::after{content:'';width:8px;height:8px;border-radius:50%;background:var(--accent)}
+        .custom-job-toggle{padding:10px 16px;background:none;border:1px dashed var(--border);border-radius:12px;cursor:pointer;transition:all .2s;color:var(--text-dim);font-size:13px;font-family:'Inter',sans-serif;width:100%;text-align:left;margin-top:4px}
+        .custom-job-toggle:hover{border-color:var(--primary);color:var(--text)}
+        .custom-job-area{display:none;margin-top:8px}
+        .custom-job-area.visible{display:block}
+        .search-box{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:8px 14px;margin-bottom:12px}
+        .search-box input{flex:1;background:none;border:none;color:var(--text);font-size:13px;font-family:'Inter',sans-serif;outline:none}
+        .search-box input::placeholder{color:var(--text-muted)}
+        .action-bar{display:flex;justify-content:center;padding:10px 0}
+        .match-btn{display:flex;align-items:center;gap:10px;padding:16px 48px;background:linear-gradient(135deg,var(--primary)0%,#8b5cf6 100%);border:none;border-radius:14px;color:#fff;font-size:16px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;transition:all .3s;position:relative;overflow:hidden}
+        .match-btn::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);transition:left .5s}
+        .match-btn:hover::before{left:100%}
+        .match-btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(108,92,231,.4)}
+        .match-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+        .match-btn .spinner{width:20px;height:20px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;display:none}
+        .match-btn.loading .spinner{display:block}
+        .match-btn.loading .btn-text{display:none}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .scanning-line{position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:scanLine 2s linear infinite;display:none}
+        @keyframes scanLine{0%{top:0;opacity:1}100%{top:100%;opacity:0}}
+        .results-section{display:none;animation:slideUp .6s ease-out}
+        .results-section.visible{display:block}
+        @keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+        .results-grid{display:grid;grid-template-columns:340px 1fr;gap:24px}
+        .score-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:30px;display:flex;flex-direction:column;align-items:center;text-align:center}
+        .score-ring-wrapper{position:relative;width:200px;height:200px;margin-bottom:20px}
+        .score-ring{width:200px;height:200px;transform:rotate(-90deg)}
+        .score-ring-bg{fill:none;stroke:var(--surface2);stroke-width:10}
+        .score-ring-fill{fill:none;stroke-width:10;stroke-linecap:round;stroke-dasharray:565.48;stroke-dashoffset:565.48;transition:stroke-dashoffset 2s ease-out,stroke .5s}
+        .score-value{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+        .score-value .number{font-size:52px;font-weight:800;line-height:1}
+        .score-value .percent{font-size:20px;font-weight:600;color:var(--text-dim)}
+        .score-value .label{font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:2px;margin-top:4px}
+        .verdict{font-size:18px;font-weight:700;margin-bottom:6px}
+        .verdict-desc{font-size:13px;color:var(--text-dim);line-height:1.5}
+        .stats-bar{display:flex;gap:20px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+        .stat-item{text-align:center}
+        .stat-item .stat-num{font-size:22px;font-weight:800}
+        .stat-item .stat-label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px}
+        .breakdown-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px}
+        .breakdown-card h3{font-size:16px;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:8px}
+        .category-item{margin-bottom:18px;animation:fadeIn .5s ease-out both}
+        .category-item:nth-child(2){animation-delay:.1s}
+        .category-item:nth-child(3){animation-delay:.2s}
+        .category-item:nth-child(4){animation-delay:.3s}
+        .category-item:nth-child(5){animation-delay:.4s}
+        @keyframes fadeIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+        .category-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+        .category-name{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
+        .category-score{font-size:13px;font-weight:700}
+        .progress-track{height:8px;background:var(--surface2);border-radius:4px;overflow:hidden}
+        .progress-fill{height:100%;border-radius:4px;width:0%;transition:width 1.5s ease-out}
+        .category-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+        .tag{font-size:11px;padding:3px 10px;border-radius:6px;border:1px solid}
+        .tag.matched{background:rgba(0,184,148,.1);border-color:rgba(0,184,148,.3);color:var(--success)}
+        .tag.missing{background:rgba(225,112,85,.1);border-color:rgba(225,112,85,.3);color:var(--danger)}
+        .tag.partial{background:rgba(253,203,110,.1);border-color:rgba(253,203,110,.3);color:var(--warning)}
+        .detail-panels{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:24px}
+        .detail-panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px}
+        .detail-panel h4{font-size:13px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+        .detail-list{list-style:none}
+        .detail-list li{font-size:12px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);display:flex;align-items:center;gap:8px;color:var(--text-dim)}
+        .detail-list li:last-child{border:none}
+        .detail-list .check{color:var(--success)}.detail-list .cross{color:var(--danger)}.detail-list .warn{color:var(--warning)}
+        .recommendation{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;margin-top:24px}
+        .recommendation h3{font-size:16px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+        .rec-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+        .rec-item{padding:14px;background:var(--bg);border-radius:10px;border-left:3px solid;font-size:13px;line-height:1.5}
+        .rec-item.improve{border-color:var(--warning)}.rec-item.strength{border-color:var(--success)}
+        .rec-item .rec-title{font-weight:600;margin-bottom:4px;font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+        .rec-item.improve .rec-title{color:var(--warning)}.rec-item.strength .rec-title{color:var(--success)}
+        .particles{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:0}
+        .particle{position:absolute;width:3px;height:3px;background:var(--primary);border-radius:50%;opacity:0;animation:float 8s infinite}
+        @keyframes float{0%{opacity:0;transform:translateY(100vh) scale(0)}10%{opacity:.6}90%{opacity:.6}100%{opacity:0;transform:translateY(-10vh) scale(1)}}
+        @media(max-width:900px){.main-grid,.results-grid,.detail-panels,.rec-grid{grid-template-columns:1fr}.header h1{font-size:28px}}
+        ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+    </style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="particles" id="particles"></div>
+<div class="container">
+    <div class="header">
+        <div class="header-badge"><span class="dot"></span> AI-Powered Analysis</div>
+        <h1>Resume ↔ Job Matcher</h1>
+        <p>Upload your resume, pick a job from the list, and instantly see how well you match</p>
+    </div>
+    <div class="steps-bar">
+        <div class="step-pill active" id="step1"><span class="num">1</span> Upload Resume</div>
+        <div class="step-arrow">→</div>
+        <div class="step-pill" id="step2"><span class="num">2</span> Select Job</div>
+        <div class="step-arrow">→</div>
+        <div class="step-pill" id="step3"><span class="num">3</span> View Results</div>
+    </div>
+    <div class="main-grid">
+        <div class="panel">
+            <div class="panel-header">
+                <h2><span class="icon resume-icon">📄</span> Your Resume</h2>
+            </div>
+            <div class="panel-body" style="position:relative">
+                <div class="scanning-line" id="resumeScan"></div>
+                <div class="upload-zone" id="uploadZone">
+                    <input type="file" id="fileInput" accept=".txt,.pdf,.doc,.docx,.rtf">
+                    <span class="upload-icon">📁</span>
+                    <div class="upload-title">Drop your resume here or click to upload</div>
+                    <div class="upload-hint">Supports .txt, .pdf, .doc, .docx — or paste below</div>
+                </div>
+                <div class="file-info" id="fileInfo">
+                    <span>📎</span>
+                    <span class="file-name" id="fileName"></span>
+                    <button class="remove-btn" onclick="removeFile()" title="Remove">✕</button>
+                </div>
+                <div class="or-divider">or paste manually</div>
+                <textarea class="text-area" id="resumeInput" placeholder="Paste your full resume text here...
+
+Include your skills, experience, education, certifications..." style="min-height:180px"></textarea>
+            </div>
+        </div>
+        <div class="panel">
+            <div class="panel-header">
+                <h2><span class="icon job-icon">💼</span> Select a Job</h2>
+                <span style="font-size:12px;color:var(--text-muted)" id="jobCount">10 jobs</span>
+            </div>
+            <div class="panel-body">
+                <div class="search-box">
+                    <span>🔍</span>
+                    <input type="text" id="jobSearch" placeholder="Search jobs by title, company, or skill..." oninput="filterJobs()">
+                </div>
+                <div class="job-list" id="jobList"></div>
+                <button class="custom-job-toggle" onclick="toggleCustomJob()">✏️ Or paste a custom job description</button>
+                <div class="custom-job-area" id="customJobArea">
+                    <textarea class="text-area" id="customJobInput" placeholder="Paste the full job description here..." style="min-height:150px;margin-top:8px"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="action-bar">
+        <button class="match-btn" id="matchBtn" onclick="runMatch()">
+            <span class="btn-text">⚡ Analyze Match</span>
+            <div class="spinner"></div>
+        </button>
+    </div>
+    <div class="results-section" id="results">
+        <div class="results-grid">
+            <div class="score-card">
+                <div class="score-ring-wrapper">
+                    <svg class="score-ring" viewBox="0 0 200 200">
+                        <circle class="score-ring-bg" cx="100" cy="100" r="90"/>
+                        <circle class="score-ring-fill" id="scoreRing" cx="100" cy="100" r="90"/>
+                    </svg>
+                    <div class="score-value">
+                        <span class="number" id="scoreNum">0</span><span class="percent">%</span>
+                        <div class="label">Match Score</div>
+                    </div>
+                </div>
+                <div class="verdict" id="verdict">—</div>
+                <div class="verdict-desc" id="verdictDesc">—</div>
+                <div class="stats-bar" id="statsBar"></div>
+            </div>
+            <div class="breakdown-card">
+                <h3>📊 Skill Category Breakdown</h3>
+                <div id="breakdownList"></div>
+            </div>
+        </div>
+        <div class="detail-panels" id="detailPanels"></div>
+        <div class="recommendation">
+            <h3>💡 AI Recommendations</h3>
+            <div class="rec-grid" id="recGrid"></div>
+        </div>
+    </div>
+</div>
+<script>
+const jobDatabase=[{id:1,title:"Senior Full-Stack Developer",company:"InnovateTech — Hyderabad",salary:"₹18-28 LPA",type:"Hybrid",tags:["React","Node.js","AWS","TypeScript"],description:"SENIOR FULL-STACK DEVELOPER\nCompany: InnovateTech — Hyderabad (Hybrid) | Salary: ₹18-28 LPA\n\nREQUIREMENTS\n• 4+ years of experience in full-stack web development\n• Expert in React.js, Next.js, and TypeScript\n• Strong backend skills with Node.js and Express.js\n• Experience with PostgreSQL and MongoDB databases\n• Proficiency in REST API and GraphQL design\n• Experience with AWS services (EC2, S3, Lambda, RDS)\n• Familiarity with Docker and CI/CD pipelines\n• Strong knowledge of Git and version control\n• Experience with Agile/Scrum methodologies\n\nNICE TO HAVE\n• Experience with Redis and caching strategies\n• Knowledge of microservices architecture\n• WebSocket real-time applications\n• Team mentoring experience"},{id:2,title:"ML Engineer",company:"AI Solutions Lab — Bangalore",salary:"₹20-35 LPA",type:"Remote",tags:["Python","TensorFlow","NLP","SageMaker"],description:"ML ENGINEER\nCompany: AI Solutions Lab — Bangalore (Remote) | Salary: ₹20-35 LPA\n\nREQUIREMENTS\n• 3+ years in ML/Data Science roles\n• Strong Python programming skills\n• Experience with TensorFlow or PyTorch\n• Knowledge of NLP and/or Computer Vision\n• Experience with cloud ML services (AWS SageMaker, GCP)\n• Proficiency in SQL and data pipeline tools (Airflow, Spark)\n• Experience with MLOps tools (MLflow, Kubeflow, DVC)\n• Strong statistical and mathematical foundation\n\nNICE TO HAVE\n• Experience with LLMs and transformer architectures\n• Knowledge of Kubernetes\n• A/B testing for ML models"},{id:3,title:"Senior Product Designer",company:"DesignHub — Mumbai",salary:"₹15-25 LPA",type:"Hybrid",tags:["Figma","User Research","Design Systems","WCAG"],description:"SENIOR PRODUCT DESIGNER\nCompany: DesignHub — Mumbai (Hybrid) | Salary: ₹15-25 LPA\n\nREQUIREMENTS\n• 4+ years of product/UI/UX design experience\n• Expert-level Figma skills including design systems\n• Experience conducting user research and usability testing\n• Knowledge of accessibility standards (WCAG 2.1)\n• Design thinking methodology\n• Responsive and mobile-first design\n• Strong prototyping skills\n\nNICE TO HAVE\n• Basic frontend skills (HTML, CSS, React)\n• Motion design and micro-interactions\n• Knowledge of Framer\n• Lean UX methodology"},{id:4,title:"DevOps Engineer",company:"CloudScale — Pune",salary:"₹16-26 LPA",type:"Remote",tags:["Docker","Kubernetes","AWS","Terraform"],description:"DEVOPS ENGINEER\nCompany: CloudScale — Pune (Remote) | Salary: ₹16-26 LPA\n\nREQUIREMENTS\n• 3+ years of DevOps/SRE experience\n• Expert in Docker and Kubernetes orchestration\n• Strong AWS (EC2, ECS, EKS, Lambda, CloudFormation)\n• Infrastructure as Code (Terraform, Ansible)\n• CI/CD tools (Jenkins, GitHub Actions, GitLab CI)\n• Linux administration\n• Monitoring: Prometheus, Grafana, ELK stack\n• Scripting in Bash, Python, or Go\n\nNICE TO HAVE\n• Service mesh (Istio)\n• GitOps (ArgoCD, Flux)\n• AWS Solutions Architect certification"},{id:5,title:"React Native Developer",company:"MobileFirst — Delhi",salary:"₹12-20 LPA",type:"Hybrid",tags:["React Native","JavaScript","iOS","Android"],description:"REACT NATIVE DEVELOPER\nCompany: MobileFirst — Delhi (Hybrid) | Salary: ₹12-20 LPA\n\nREQUIREMENTS\n• 2+ years of React Native development\n• Strong JavaScript and TypeScript skills\n• Experience publishing apps to App Store and Play Store\n• Native modules and bridging (iOS/Android)\n• Redux or MobX state management\n• REST APIs and GraphQL\n• Push notifications and deep linking\n• Jest and Detox testing\n\nNICE TO HAVE\n• Native iOS (Swift) or Android (Kotlin)\n• Firebase services\n• Animations (Reanimated, Lottie)"},{id:6,title:"Data Analyst",company:"InsightCorp — Chennai",salary:"₹8-15 LPA",type:"On-site",tags:["SQL","Python","Tableau","Excel"],description:"DATA ANALYST\nCompany: InsightCorp — Chennai (On-site) | Salary: ₹8-15 LPA\n\nREQUIREMENTS\n• 2+ years of data analysis experience\n• Advanced SQL skills\n• Python (Pandas, NumPy) or R\n• Tableau or Power BI dashboards\n• Strong Excel skills\n• Statistical analysis and hypothesis testing\n• Data cleaning and ETL processes\n\nNICE TO HAVE\n• Google Analytics\n• A/B testing methodology\n• Basic machine learning knowledge"},{id:7,title:"Backend Engineer (Java)",company:"FinServ Technologies — Bangalore",salary:"₹20-32 LPA",type:"Hybrid",tags:["Java","Spring Boot","Microservices","Kafka"],description:"BACKEND ENGINEER (JAVA)\nCompany: FinServ Technologies — Bangalore (Hybrid) | Salary: ₹20-32 LPA\n\nREQUIREMENTS\n• 4+ years backend development with Java\n• Expert in Spring Boot and Spring Framework\n• Microservices architecture\n• Apache Kafka and message queues\n• Strong SQL (PostgreSQL, Oracle)\n• Redis caching\n• RESTful API design patterns\n• Docker and Kubernetes\n• CI/CD and Jenkins\n• SOLID principles and design patterns\n\nNICE TO HAVE\n• Event-driven architecture\n• GraphQL\n• AWS/GCP cloud experience"},{id:8,title:"Cybersecurity Analyst",company:"SecureNet — Hyderabad",salary:"₹14-24 LPA",type:"On-site",tags:["SIEM","Pen Testing","Firewall","SOC"],description:"CYBERSECURITY ANALYST\nCompany: SecureNet — Hyderabad (On-site) | Salary: ₹14-24 LPA\n\nREQUIREMENTS\n• 3+ years in cybersecurity\n• SIEM tools (Splunk, QRadar, Sentinel)\n• Penetration testing and vulnerability assessment\n• Firewalls, IDS/IPS, network security\n• OWASP Top 10 and secure coding\n• Compliance frameworks (ISO 27001, SOC 2, GDPR)\n• Incident response procedures\n• Endpoint security solutions\n\nNICE TO HAVE\n• CEH, CISSP, CompTIA Security+\n• Cloud security (AWS, Azure)\n• Threat hunting and malware analysis"},{id:9,title:"Frontend Developer (Vue.js)",company:"WebCraft — Gurgaon",salary:"₹10-18 LPA",type:"Remote",tags:["Vue.js","JavaScript","CSS","Nuxt.js"],description:"FRONTEND DEVELOPER (VUE.JS)\nCompany: WebCraft — Gurgaon (Remote) | Salary: ₹10-18 LPA\n\nREQUIREMENTS\n• 2+ years frontend with Vue.js\n• Strong JavaScript and TypeScript\n• Nuxt.js for SSR\n• HTML5, CSS3, SCSS/SASS\n• Vuex or Pinia state management\n• REST APIs and Axios/Fetch\n• Unit testing (Vitest, Jest)\n• Responsive design, Tailwind, Bootstrap\n• Git and version control\n\nNICE TO HAVE\n• Storybook\n• Web performance optimization\n• PWA development\n• Figma design handoff"},{id:10,title:"AI/LLM Engineer",company:"GenAI Labs — Bangalore",salary:"₹25-45 LPA",type:"Remote",tags:["Python","LLMs","RAG","LangChain"],description:"AI/LLM ENGINEER\nCompany: GenAI Labs — Bangalore (Remote) | Salary: ₹25-45 LPA\n\nREQUIREMENTS\n• 3+ years AI/ML engineering\n• LLM architectures (GPT, LLaMA, Mistral)\n• LangChain, LlamaIndex frameworks\n• Python and async programming\n• RAG (Retrieval Augmented Generation) systems\n• Vector databases (Pinecone, Weaviate, ChromaDB)\n• Prompt engineering and fine-tuning\n• Cloud deployment (AWS, GCP)\n• Embeddings and semantic search\n\nNICE TO HAVE\n• Multi-agent systems (CrewAI, AutoGen)\n• Model quantization and optimization\n• Hugging Face ecosystem"}];
+
+let selectedJobId=null,uploadedResumeText='';
+
+function renderJobs(jobs){
+    const list=document.getElementById('jobList');
+    list.innerHTML=jobs.map(j=>`<div class="job-card ${selectedJobId===j.id?'selected':''}" onclick="selectJob(${j.id})"><div class="job-title"><span class="radio-dot"></span>${j.title}</div><div class="job-company">${j.company} · ${j.salary} · ${j.type}</div><div class="job-tags">${j.tags.map(t=>`<span class="job-tag">${t}</span>`).join('')}</div></div>`).join('');
+    document.getElementById('jobCount').textContent=`${jobs.length} jobs`;
+}
+
+function selectJob(id){selectedJobId=id;document.getElementById('customJobArea').classList.remove('visible');document.getElementById('customJobInput').value='';renderJobs(getFilteredJobs());updateSteps()}
+function getFilteredJobs(){const q=document.getElementById('jobSearch').value.toLowerCase();if(!q)return jobDatabase;return jobDatabase.filter(j=>j.title.toLowerCase().includes(q)||j.company.toLowerCase().includes(q)||j.tags.some(t=>t.toLowerCase().includes(q)))}
+function filterJobs(){renderJobs(getFilteredJobs())}
+function toggleCustomJob(){const a=document.getElementById('customJobArea');a.classList.toggle('visible');if(a.classList.contains('visible')){selectedJobId=null;renderJobs(getFilteredJobs())}}
+
+const uploadZone=document.getElementById('uploadZone'),fileInput=document.getElementById('fileInput');
+uploadZone.addEventListener('dragover',e=>{e.preventDefault();uploadZone.classList.add('dragover')});
+uploadZone.addEventListener('dragleave',()=>uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop',e=>{e.preventDefault();uploadZone.classList.remove('dragover');if(e.dataTransfer.files.length)handleFile(e.dataTransfer.files[0])});
+fileInput.addEventListener('change',e=>{if(e.target.files.length)handleFile(e.target.files[0])});
+
+function handleFile(file){
+    const name=file.name,ext=name.split('.').pop().toLowerCase();
+    document.getElementById('fileName').textContent=name;
+    document.getElementById('fileInfo').classList.add('visible');
+    uploadZone.classList.add('has-file');
+    if(ext==='txt'||ext==='rtf'){
+        const r=new FileReader();r.onload=e=>{uploadedResumeText=e.target.result;document.getElementById('resumeInput').value=uploadedResumeText;updateSteps()};r.readAsText(file);
+    }else{
+        const r=new FileReader();r.onload=e=>{
+            try{const u=new Uint8Array(e.target.result);let t='';for(let i=0;i<u.length;i++){const c=u[i];if((c>=32&&c<=126)||c===10||c===13)t+=String.fromCharCode(c)}t=t.replace(/\s+/g,' ').trim();if(t.length>50){uploadedResumeText=t;document.getElementById('resumeInput').value=t}else{document.getElementById('resumeInput').placeholder='File loaded: "'+name+'"\n\nFor best results, also paste the text content below.'}}catch(ex){}
+            updateSteps();
+        };r.readAsArrayBuffer(file);
+    }
+}
+
+function removeFile(){fileInput.value='';uploadedResumeText='';document.getElementById('fileInfo').classList.remove('visible');uploadZone.classList.remove('has-file');document.getElementById('resumeInput').value='';updateSteps()}
+
+function updateSteps(){
+    const hasResume=document.getElementById('resumeInput').value.trim().length>20;
+    const hasJob=selectedJobId||document.getElementById('customJobInput').value.trim().length>20;
+    document.getElementById('step1').className='step-pill '+(hasResume?'done':'active');
+    document.getElementById('step2').className='step-pill '+(hasJob?'done':(hasResume?'active':''));
+    document.getElementById('step3').className='step-pill '+(hasResume&&hasJob?'active':'');
+}
+document.getElementById('resumeInput').addEventListener('input',updateSteps);
+document.getElementById('customJobInput').addEventListener('input',()=>{if(document.getElementById('customJobInput').value.trim().length>0){selectedJobId=null;renderJobs(getFilteredJobs())}updateSteps()});
+
+function extractKeywords(text){
+    const t=text.toLowerCase();
+    const sm={'Technical Skills':{keywords:['react','next.js','typescript','javascript','node.js','express','python','java','c++','go','rust','ruby','php','swift','kotlin','scala','sql','html','css','tailwind','redux','vue','angular','svelte','django','flask','spring','graphql','rest api','nuxt','react native','langchain','llm','rag','prompt engineering','fine-tuning'],color:'#6c5ce7'},'Data & ML':{keywords:['tensorflow','pytorch','scikit-learn','keras','xgboost','nlp','computer vision','machine learning','deep learning','pandas','numpy','spark','hadoop','hive','airflow','mlflow','mlops','dvc','tableau','power bi','matplotlib','data pipeline','a/b testing','statistical','sagemaker','vector database','embeddings','transformer'],color:'#00cec9'},'Cloud & DevOps':{keywords:['aws','gcp','azure','docker','kubernetes','ci/cd','github actions','jenkins','terraform','ec2','s3','lambda','rds','redis','firebase','microservices','websocket','ansible','prometheus','grafana','elk','linux','bash'],color:'#fd79a8'},'Database':{keywords:['postgresql','mongodb','mysql','redis','firebase','dynamodb','cassandra','elasticsearch','supabase','sqlite','oracle','bigquery','pinecone','weaviate','chromadb'],color:'#fdcb6e'},'Design & UX':{keywords:['figma','sketch','adobe xd','photoshop','illustrator','after effects','invision','framer','prototyping','user research','usability testing','wireframe','design system','wcag','accessibility','ux','ui','design thinking','lean ux','storybook'],color:'#a29bfe'},'Security':{keywords:['siem','penetration testing','firewall','soc','owasp','ids','ips','incident response','vulnerability','encryption','iso 27001','gdpr','compliance','endpoint security','threat','malware'],color:'#e17055'},'Soft Skills & Process':{keywords:['agile','scrum','kanban','jira','mentor','leadership','collaboration','code review','team lead','communication','git','version control'],color:'#55efc4'}};
+    const result={};
+    for(const[cat,data]of Object.entries(sm)){const found=data.keywords.filter(k=>t.includes(k));if(found.length>0)result[cat]={keywords:found,color:data.color}}
+    return result;
+}
+
+function analyzeMatch(rt,jt){
+    const rs=extractKeywords(rt),js=extractKeywords(jt);
+    const categories=[];let tw=0,ts=0;
+    for(const[cat,jd]of Object.entries(js)){
+        const jk=jd.keywords,rk=rs[cat]?.keywords||[];
+        const matched=jk.filter(k=>rk.includes(k)),missing=jk.filter(k=>!rk.includes(k)),extra=rk.filter(k=>!jk.includes(k));
+        const score=jk.length>0?Math.round((matched.length/jk.length)*100):0;
+        tw+=jk.length;ts+=(score/100)*jk.length;
+        categories.push({name:cat,score,matched,missing,extra,color:jd.color,required:jk.length,found:matched.length});
+    }
+    const em=rt.match(/(\d+)\+?\s*years?/i),jm=jt.match(/(\d+)\+?\s*years?/i);
+    const re=em?parseInt(em[1]):0,je=jm?parseInt(jm[1]):0;
+    const es=re>=je?100:Math.round((re/je)*100);
+    const os=tw>0?Math.round((ts/tw)*75+es*0.25):es;
+    const am=categories.flatMap(c=>c.matched),ams=categories.flatMap(c=>c.missing),ae=categories.flatMap(c=>c.extra);
+    return{overallScore:Math.min(os,100),categories,experience:{resume:re,required:je,score:es},allMatched:am,allMissing:ams,allExtra:ae,totalSkillsRequired:Object.values(js).reduce((s,d)=>s+d.keywords.length,0),totalSkillsMatched:am.length};
+}
+
+function getScoreColor(s){if(s>=80)return'#00b894';if(s>=60)return'#fdcb6e';if(s>=40)return'#e17055';return'#d63031'}
+function getVerdict(s){if(s>=85)return{text:'🎯 Excellent Match!',desc:'Your profile is highly aligned. Apply with confidence!'};if(s>=70)return{text:'✅ Strong Match',desc:'Good alignment. A few gaps, but you are a competitive candidate.'};if(s>=55)return{text:'⚡ Moderate Match',desc:'Decent overlap, but key skills missing. Consider upskilling.'};if(s>=35)return{text:'⚠️ Partial Match',desc:'Significant gaps. This role may require skills outside your experience.'};return{text:'❌ Low Match',desc:'This role does not align well with your current profile.'}}
+
+function animateScore(target){
+    const el=document.getElementById('scoreNum'),ring=document.getElementById('scoreRing'),circ=2*Math.PI*90;
+    let cur=0;const color=getScoreColor(target);ring.style.stroke=color;el.style.color=color;
+    ring.style.strokeDashoffset=circ;el.textContent='0';
+    const iv=setInterval(()=>{cur++;if(cur>target){clearInterval(iv);return}el.textContent=cur;ring.style.strokeDashoffset=circ-(cur/100)*circ},20);
+}
+
+function renderBreakdown(cats){
+    const c=document.getElementById('breakdownList');c.innerHTML='';
+    cats.sort((a,b)=>b.required-a.required).forEach(cat=>{
+        const d=document.createElement('div');d.className='category-item';
+        d.innerHTML=`<div class="category-header"><span class="category-name"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${cat.color}"></span>${cat.name}</span><span class="category-score" style="color:${getScoreColor(cat.score)}">${cat.score}%</span></div><div class="progress-track"><div class="progress-fill" style="background:${cat.color}" data-width="${cat.score}"></div></div><div class="category-tags">${cat.matched.map(k=>`<span class="tag matched">✓ ${k}</span>`).join('')}${cat.missing.map(k=>`<span class="tag missing">✗ ${k}</span>`).join('')}${cat.extra.map(k=>`<span class="tag partial">+ ${k}</span>`).join('')}</div>`;
+        c.appendChild(d);
+    });
+    setTimeout(()=>{document.querySelectorAll('.progress-fill').forEach(b=>{b.style.width=b.dataset.width+'%'})},200);
+}
+
+function renderDetailPanels(r){
+    document.getElementById('detailPanels').innerHTML=`<div class="detail-panel"><h4><span style="color:var(--success)">✅</span> Matched (${r.allMatched.length})</h4><ul class="detail-list">${r.allMatched.slice(0,12).map(s=>`<li><span class="check">✓</span> ${s}</li>`).join('')}${r.allMatched.length>12?`<li style="color:var(--text-muted)">+${r.allMatched.length-12} more</li>`:''}</ul></div><div class="detail-panel"><h4><span style="color:var(--danger)">❌</span> Missing (${r.allMissing.length})</h4><ul class="detail-list">${r.allMissing.slice(0,12).map(s=>`<li><span class="cross">✗</span> ${s}</li>`).join('')}${r.allMissing.length>12?`<li style="color:var(--text-muted)">+${r.allMissing.length-12} more</li>`:''}</ul></div><div class="detail-panel"><h4><span style="color:var(--warning)">➕</span> Bonus (${r.allExtra.length})</h4><ul class="detail-list">${r.allExtra.slice(0,12).map(s=>`<li><span class="warn">★</span> ${s}</li>`).join('')}${r.allExtra.length>12?`<li style="color:var(--text-muted)">+${r.allExtra.length-12} more</li>`:''}</ul></div>`;
+}
+
+function renderRecs(r){
+    const recs=[];
+    if(r.experience.score>=100)recs.push({type:'strength',title:'Experience ✓',text:`You meet the ${r.experience.required}+ year requirement with ${r.experience.resume} years.`});
+    if(r.allMatched.length>5)recs.push({type:'strength',title:'Strong Skill Base',text:`${r.allMatched.length}/${r.totalSkillsRequired} required skills matched.`});
+    if(r.allMissing.length>0)recs.push({type:'improve',title:'Skill Gaps',text:`Focus on: ${r.allMissing.slice(0,3).join(', ')}.`});
+    if(r.experience.score<100)recs.push({type:'improve',title:'Experience Gap',text:`Job needs ${r.experience.required}+ yrs, you have ${r.experience.resume}. Highlight project impact.`});
+    if(r.allExtra.length>0)recs.push({type:'strength',title:'Bonus Skills',text:`${r.allExtra.length} extra skills (${r.allExtra.slice(0,3).join(', ')}) add value.`});
+    if(r.overallScore<70)recs.push({type:'improve',title:'Resume Tip',text:"Mirror the job description's exact keywords for better ATS matching."});
+    document.getElementById('recGrid').innerHTML=recs.map(r=>`<div class="rec-item ${r.type}"><div class="rec-title">${r.title}</div>${r.text}</div>`).join('');
+}
+
+function renderStats(r){
+    document.getElementById('statsBar').innerHTML=`<div class="stat-item"><div class="stat-num" style="color:var(--success)">${r.allMatched.length}</div><div class="stat-label">Matched</div></div><div class="stat-item"><div class="stat-num" style="color:var(--danger)">${r.allMissing.length}</div><div class="stat-label">Missing</div></div><div class="stat-item"><div class="stat-num" style="color:var(--warning)">${r.allExtra.length}</div><div class="stat-label">Bonus</div></div><div class="stat-item"><div class="stat-num" style="color:var(--primary-light)">${r.experience.resume}yr</div><div class="stat-label">Experience</div></div>`;
+}
+
+async function runMatch(){
+    const resumeText=document.getElementById('resumeInput').value.trim();
+    const customJob=document.getElementById('customJobInput').value.trim();
+    const jobText=selectedJobId?jobDatabase.find(j=>j.id===selectedJobId)?.description||'':customJob;
+    if(!resumeText||resumeText.length<30){alert('Please upload or paste your resume.');return}
+    if(!jobText||jobText.length<30){alert('Please select a job or paste a job description.');return}
+    const btn=document.getElementById('matchBtn');btn.classList.add('loading');btn.disabled=true;
+    document.getElementById('resumeScan').style.display='block';
+    await new Promise(r=>setTimeout(r,2000));
+    document.getElementById('resumeScan').style.display='none';
+    const result=analyzeMatch(resumeText,jobText);
+    const re=document.getElementById('results');re.classList.add('visible');re.scrollIntoView({behavior:'smooth',block:'start'});
+    const v=getVerdict(result.overallScore);
+    document.getElementById('verdict').textContent=v.text;document.getElementById('verdictDesc').textContent=v.desc;
+    animateScore(result.overallScore);renderBreakdown(result.categories);renderDetailPanels(result);renderRecs(result);renderStats(result);
+    document.getElementById('step3').className='step-pill done';
+    btn.classList.remove('loading');btn.disabled=false;
+}
+
+renderJobs(jobDatabase);
+const pe=document.getElementById('particles');
+for(let i=0;i<20;i++){const p=document.createElement('div');p.className='particle';p.style.left=Math.random()*100+'%';p.style.animationDelay=Math.random()*8+'s';p.style.animationDuration=(6+Math.random()*6)+'s';p.style.background=['#6c5ce7','#00cec9','#fd79a8','#fdcb6e'][Math.floor(Math.random()*4)];pe.appendChild(p)}
+</script>
+</body>
+</html>
