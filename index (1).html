@@ -18,6 +18,7 @@
         @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.5)}}
         .header h1{font-size:42px;font-weight:800;background:linear-gradient(135deg,#fff 0%,var(--primary-light)50%,var(--accent)100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:10px;line-height:1.2}
         .header p{color:var(--text-dim);font-size:16px;max-width:600px;margin:0 auto}
+        .header .scope-note{margin-top:10px;font-size:13px;color:var(--text-muted)}
         .steps-bar{display:flex;justify-content:center;gap:8px;margin-bottom:32px;flex-wrap:wrap}
         .step-pill{display:flex;align-items:center;gap:8px;padding:10px 20px;border-radius:50px;background:var(--surface);border:1px solid var(--border);font-size:13px;font-weight:600;color:var(--text-muted);transition:all .3s}
         .step-pill.active{border-color:var(--primary);color:var(--primary-light);background:rgba(108,92,231,.1)}
@@ -38,6 +39,8 @@
         .upload-zone .upload-icon{font-size:36px;margin-bottom:8px;display:block}
         .upload-zone .upload-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}
         .upload-zone .upload-hint{font-size:12px;color:var(--text-muted)}
+        .file-error{display:none;color:var(--danger);font-size:12px;line-height:1.5;margin:-4px 0 12px}
+        .file-error.visible{display:block}
         .upload-zone input[type="file"]{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer}
         .upload-zone.has-file{border-color:var(--success);background:rgba(0,184,148,.05)}
         .file-info{display:none;align-items:center;gap:10px;padding:10px 14px;background:var(--bg);border-radius:10px;margin-bottom:12px;font-size:13px}
@@ -144,9 +147,10 @@
 <div class="particles" id="particles"></div>
 <div class="container">
     <div class="header">
-        <div class="header-badge"><span class="dot"></span> AI-Powered Analysis</div>
+        <div class="header-badge"><span class="dot"></span> Browser-only keyword demo</div>
         <h1>Resume ↔ Job Matcher</h1>
-        <p>Upload your resume, pick a job from the list, and instantly see how well you match</p>
+        <p>Compare resume text with an illustrative sample role or a job description. No resume leaves this browser.</p>
+        <p class="scope-note">Scores count shared keywords only. They are not AI or ATS results, hiring predictions, or proof of role fit. Sample roles are fictional.</p>
     </div>
     <div class="steps-bar">
         <div class="step-pill active" id="step1"><span class="num">1</span> Upload Resume</div>
@@ -163,11 +167,12 @@
             <div class="panel-body" style="position:relative">
                 <div class="scanning-line" id="resumeScan"></div>
                 <div class="upload-zone" id="uploadZone">
-                    <input type="file" id="fileInput" accept=".txt,.pdf,.doc,.docx,.rtf">
+                    <input type="file" id="fileInput" accept=".txt,text/plain">
                     <span class="upload-icon">📁</span>
                     <div class="upload-title">Drop your resume here or click to upload</div>
-                    <div class="upload-hint">Supports .txt, .pdf, .doc, .docx — or paste below</div>
+                    <div class="upload-hint">Plain-text .txt only · for PDF or Word, copy and paste the text below · max 1 MB</div>
                 </div>
+                <div class="file-error" id="fileError" role="status" aria-live="polite"></div>
                 <div class="file-info" id="fileInfo">
                     <span>📎</span>
                     <span class="file-name" id="fileName"></span>
@@ -213,7 +218,7 @@ Include your skills, experience, education, certifications..." style="min-height
                     </svg>
                     <div class="score-value">
                         <span class="number" id="scoreNum">0</span><span class="percent">%</span>
-                        <div class="label">Match Score</div>
+                        <div class="label">Keyword Overlap</div>
                     </div>
                 </div>
                 <div class="verdict" id="verdict">—</div>
@@ -249,27 +254,29 @@ function filterJobs(){renderJobs(getFilteredJobs())}
 function toggleCustomJob(){const a=document.getElementById('customJobArea');a.classList.toggle('visible');if(a.classList.contains('visible')){selectedJobId=null;renderJobs(getFilteredJobs())}}
 
 const uploadZone=document.getElementById('uploadZone'),fileInput=document.getElementById('fileInput');
+const maxResumeBytes=1024*1024;
 uploadZone.addEventListener('dragover',e=>{e.preventDefault();uploadZone.classList.add('dragover')});
 uploadZone.addEventListener('dragleave',()=>uploadZone.classList.remove('dragover'));
 uploadZone.addEventListener('drop',e=>{e.preventDefault();uploadZone.classList.remove('dragover');if(e.dataTransfer.files.length)handleFile(e.dataTransfer.files[0])});
 fileInput.addEventListener('change',e=>{if(e.target.files.length)handleFile(e.target.files[0])});
 
+function setFileError(message){const error=document.getElementById('fileError');error.textContent=message;error.classList.toggle('visible',Boolean(message))}
 function handleFile(file){
-    const name=file.name,ext=name.split('.').pop().toLowerCase();
+    if(!file)return;
+    const name=file.name;
+    if(!/\.txt$/i.test(name)){setFileError('Only plain-text .txt files are supported. For PDF or Word resumes, copy the text and paste it below.');fileInput.value='';return}
+    if(file.size>maxResumeBytes){setFileError('This file exceeds the 1 MB limit. Paste a shorter text version instead.');fileInput.value='';return}
+    setFileError('');
     document.getElementById('fileName').textContent=name;
     document.getElementById('fileInfo').classList.add('visible');
     uploadZone.classList.add('has-file');
-    if(ext==='txt'||ext==='rtf'){
-        const r=new FileReader();r.onload=e=>{uploadedResumeText=e.target.result;document.getElementById('resumeInput').value=uploadedResumeText;updateSteps()};r.readAsText(file);
-    }else{
-        const r=new FileReader();r.onload=e=>{
-            try{const u=new Uint8Array(e.target.result);let t='';for(let i=0;i<u.length;i++){const c=u[i];if((c>=32&&c<=126)||c===10||c===13)t+=String.fromCharCode(c)}t=t.replace(/\s+/g,' ').trim();if(t.length>50){uploadedResumeText=t;document.getElementById('resumeInput').value=t}else{document.getElementById('resumeInput').placeholder='File loaded: "'+name+'"\n\nFor best results, also paste the text content below.'}}catch(ex){}
-            updateSteps();
-        };r.readAsArrayBuffer(file);
-    }
+    const r=new FileReader();
+    r.onload=e=>{if(typeof e.target.result!=='string'){setFileError('Could not read this file as text.');return}uploadedResumeText=e.target.result;document.getElementById('resumeInput').value=uploadedResumeText;updateSteps()};
+    r.onerror=()=>setFileError('Could not read this file. Try a UTF-8 .txt file or paste the text below.');
+    r.readAsText(file,'UTF-8');
 }
 
-function removeFile(){fileInput.value='';uploadedResumeText='';document.getElementById('fileInfo').classList.remove('visible');uploadZone.classList.remove('has-file');document.getElementById('resumeInput').value='';updateSteps()}
+function removeFile(){fileInput.value='';uploadedResumeText='';setFileError('');document.getElementById('fileInfo').classList.remove('visible');uploadZone.classList.remove('has-file');document.getElementById('resumeInput').value='';updateSteps()}
 
 function updateSteps(){
     const hasResume=document.getElementById('resumeInput').value.trim().length>20;
@@ -308,7 +315,7 @@ function analyzeMatch(rt,jt){
 }
 
 function getScoreColor(s){if(s>=80)return'#00b894';if(s>=60)return'#fdcb6e';if(s>=40)return'#e17055';return'#d63031'}
-function getVerdict(s){if(s>=85)return{text:'🎯 Excellent Match!',desc:'Your profile is highly aligned. Apply with confidence!'};if(s>=70)return{text:'✅ Strong Match',desc:'Good alignment. A few gaps, but you are a competitive candidate.'};if(s>=55)return{text:'⚡ Moderate Match',desc:'Decent overlap, but key skills missing. Consider upskilling.'};if(s>=35)return{text:'⚠️ Partial Match',desc:'Significant gaps. This role may require skills outside your experience.'};return{text:'❌ Low Match',desc:'This role does not align well with your current profile.'}}
+function getVerdict(s){const desc='This local score counts shared keywords only. It is not an ATS result, a hiring prediction, or proof of role fit. Check every requirement against the official posting.';if(s>=85)return{text:'High keyword overlap',desc};if(s>=70)return{text:'Strong keyword overlap',desc};if(s>=55)return{text:'Some keyword overlap',desc};if(s>=35)return{text:'Limited keyword overlap',desc};return{text:'Low keyword overlap',desc}}
 
 function animateScore(target){
     const el=document.getElementById('scoreNum'),ring=document.getElementById('scoreRing'),circ=2*Math.PI*90;
