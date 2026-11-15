@@ -30,3 +30,15 @@ test('resume uploads are bounded UTF-8 text files only', () => {
   assert.match(html, /r\.readAsText\(file,'UTF-8'\)/);
   assert.doesNotMatch(html, /r\.readAsArrayBuffer\(file\)|accept="[^\"]*\.pdf/);
 });
+
+test('dynamic HTML text is escaped before rendering', () => {
+  assert.match(html, /function escapeHtml\(value\)/);
+  assert.match(html, /escapeHtml\(j\.title\)/);
+  assert.match(html, /escapeHtml\(cat\.name\)/);
+  assert.match(html, /escapeHtml\(s\)/);
+  assert.match(html, /escapeHtml\(r\.title\)/);
+  const source = html.match(/function escapeHtml\(value\)\{[^\r\n]+/)[0];
+  const sandbox = {};
+  vm.runInNewContext(source + ';this.escapeHtml=escapeHtml', sandbox);
+  assert.equal(sandbox.escapeHtml('<img src=x onerror=1> & "x"'), '&lt;img src=x onerror=1&gt; &amp; &quot;x&quot;');
+});
