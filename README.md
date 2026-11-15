@@ -1,12 +1,12 @@
 # AI Resume + Job Matcher
 
-<p align="center"><strong>A single-page, browser-only prototype that compares resume text with a sample job description and highlights matching skill keywords.</strong></p>
+<p align="center"><strong>A single-page, browser-only prototype that compares resume text with fictional sample roles or a pasted job description and highlights shared keywords.</strong></p>
 
 <p align="center">HTML · CSS · JavaScript · Local heuristic analysis</p>
 
 ## Project overview
 
-Paste resume text or select a text-based file, choose one of ten bundled sample jobs, or paste a custom job description. The page calculates a keyword-overlap score, groups matched and missing terms into skill categories, and displays a results breakdown.
+Paste resume text or select a UTF-8 text file, choose one of ten bundled fictional sample jobs, or paste a custom job description. The page calculates a keyword-overlap score, groups matched and missing terms into skill categories, and displays a results breakdown.
 
 ## Architecture
 
@@ -19,7 +19,7 @@ flowchart LR
   R --> P
 ```
 
-No server, AI model, database, or external resume parser is included. Sample jobs and scoring keywords are bundled in the page. Results are illustrative and should not be treated as hiring decisions or a validated ATS score.
+No server, AI model, database, or external resume parser is included. Sample jobs are fictional and scoring uses a fixed keyword list. Results show keyword overlap only; they are not hiring decisions, role-fit assessments, or validated ATS scores. Resume text is processed locally in the browser and is not uploaded.
 
 ## Run locally
 
@@ -27,7 +27,7 @@ Open [`index (1).html`](index%20%281%29.html) in a modern browser. No install or
 
 ## Use it
 
-1. Paste resume text, or try a text-based file and review the extracted text.
+1. Paste resume text, or select a UTF-8 `.txt` file (maximum 1 MB) and review the extracted text. PDF, DOC/DOCX, and RTF parsing are not implemented.
 2. Select a sample role or paste a job description.
 3. Choose **Analyze Match** and review the score and skill categories.
 4. Edit the inputs to compare a different role.

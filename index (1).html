@@ -18,6 +18,7 @@
         @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.5)}}
         .header h1{font-size:42px;font-weight:800;background:linear-gradient(135deg,#fff 0%,var(--primary-light)50%,var(--accent)100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:10px;line-height:1.2}
         .header p{color:var(--text-dim);font-size:16px;max-width:600px;margin:0 auto}
+        .header .scope-note{margin-top:10px;font-size:13px;color:var(--text-muted)}
         .steps-bar{display:flex;justify-content:center;gap:8px;margin-bottom:32px;flex-wrap:wrap}
         .step-pill{display:flex;align-items:center;gap:8px;padding:10px 20px;border-radius:50px;background:var(--surface);border:1px solid var(--border);font-size:13px;font-weight:600;color:var(--text-muted);transition:all .3s}
         .step-pill.active{border-color:var(--primary);color:var(--primary-light);background:rgba(108,92,231,.1)}
@@ -38,6 +39,8 @@
         .upload-zone .upload-icon{font-size:36px;margin-bottom:8px;display:block}
         .upload-zone .upload-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}
         .upload-zone .upload-hint{font-size:12px;color:var(--text-muted)}
+        .file-error{display:none;color:var(--danger);font-size:12px;line-height:1.5;margin:-4px 0 12px}
+        .file-error.visible{display:block}
         .upload-zone input[type="file"]{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer}
         .upload-zone.has-file{border-color:var(--success);background:rgba(0,184,148,.05)}
         .file-info{display:none;align-items:center;gap:10px;padding:10px 14px;background:var(--bg);border-radius:10px;margin-bottom:12px;font-size:13px}
@@ -144,9 +147,10 @@
 <div class="particles" id="particles"></div>
 <div class="container">
     <div class="header">
-        <div class="header-badge"><span class="dot"></span> AI-Powered Analysis</div>
+        <div class="header-badge"><span class="dot"></span> Browser-only keyword demo</div>
         <h1>Resume ↔ Job Matcher</h1>
-        <p>Upload your resume, pick a job from the list, and instantly see how well you match</p>
+        <p>Compare resume text with an illustrative sample role or a job description. No resume leaves this browser.</p>
+        <p class="scope-note">Scores count shared keywords only. They are not AI or ATS results, hiring predictions, or proof of role fit. Sample roles are fictional.</p>
     </div>
     <div class="steps-bar">
         <div class="step-pill active" id="step1"><span class="num">1</span> Upload Resume</div>
@@ -163,11 +167,12 @@
             <div class="panel-body" style="position:relative">
                 <div class="scanning-line" id="resumeScan"></div>
                 <div class="upload-zone" id="uploadZone">
-                    <input type="file" id="fileInput" accept=".txt,.pdf,.doc,.docx,.rtf">
+                    <input type="file" id="fileInput" accept=".txt,text/plain">
                     <span class="upload-icon">📁</span>
                     <div class="upload-title">Drop your resume here or click to upload</div>
-                    <div class="upload-hint">Supports .txt, .pdf, .doc, .docx — or paste below</div>
+                    <div class="upload-hint">Plain-text .txt only · for PDF or Word, copy and paste the text below · max 1 MB</div>
                 </div>
+                <div class="file-error" id="fileError" role="status" aria-live="polite"></div>
                 <div class="file-info" id="fileInfo">
                     <span>📎</span>
                     <span class="file-name" id="fileName"></span>
@@ -213,7 +218,7 @@ Include your skills, experience, education, certifications..." style="min-height
                     </svg>
                     <div class="score-value">
                         <span class="number" id="scoreNum">0</span><span class="percent">%</span>
-                        <div class="label">Match Score</div>
+                        <div class="label">Keyword Overlap</div>
                     </div>
                 </div>
                 <div class="verdict" id="verdict">—</div>
@@ -235,11 +240,14 @@ Include your skills, experience, education, certifications..." style="min-height
 <script>
 const jobDatabase=[{id:1,title:"Senior Full-Stack Developer",company:"InnovateTech — Hyderabad",salary:"₹18-28 LPA",type:"Hybrid",tags:["React","Node.js","AWS","TypeScript"],description:"SENIOR FULL-STACK DEVELOPER\nCompany: InnovateTech — Hyderabad (Hybrid) | Salary: ₹18-28 LPA\n\nREQUIREMENTS\n• 4+ years of experience in full-stack web development\n• Expert in React.js, Next.js, and TypeScript\n• Strong backend skills with Node.js and Express.js\n• Experience with PostgreSQL and MongoDB databases\n• Proficiency in REST API and GraphQL design\n• Experience with AWS services (EC2, S3, Lambda, RDS)\n• Familiarity with Docker and CI/CD pipelines\n• Strong knowledge of Git and version control\n• Experience with Agile/Scrum methodologies\n\nNICE TO HAVE\n• Experience with Redis and caching strategies\n• Knowledge of microservices architecture\n• WebSocket real-time applications\n• Team mentoring experience"},{id:2,title:"ML Engineer",company:"AI Solutions Lab — Bangalore",salary:"₹20-35 LPA",type:"Remote",tags:["Python","TensorFlow","NLP","SageMaker"],description:"ML ENGINEER\nCompany: AI Solutions Lab — Bangalore (Remote) | Salary: ₹20-35 LPA\n\nREQUIREMENTS\n• 3+ years in ML/Data Science roles\n• Strong Python programming skills\n• Experience with TensorFlow or PyTorch\n• Knowledge of NLP and/or Computer Vision\n• Experience with cloud ML services (AWS SageMaker, GCP)\n• Proficiency in SQL and data pipeline tools (Airflow, Spark)\n• Experience with MLOps tools (MLflow, Kubeflow, DVC)\n• Strong statistical and mathematical foundation\n\nNICE TO HAVE\n• Experience with LLMs and transformer architectures\n• Knowledge of Kubernetes\n• A/B testing for ML models"},{id:3,title:"Senior Product Designer",company:"DesignHub — Mumbai",salary:"₹15-25 LPA",type:"Hybrid",tags:["Figma","User Research","Design Systems","WCAG"],description:"SENIOR PRODUCT DESIGNER\nCompany: DesignHub — Mumbai (Hybrid) | Salary: ₹15-25 LPA\n\nREQUIREMENTS\n• 4+ years of product/UI/UX design experience\n• Expert-level Figma skills including design systems\n• Experience conducting user research and usability testing\n• Knowledge of accessibility standards (WCAG 2.1)\n• Design thinking methodology\n• Responsive and mobile-first design\n• Strong prototyping skills\n\nNICE TO HAVE\n• Basic frontend skills (HTML, CSS, React)\n• Motion design and micro-interactions\n• Knowledge of Framer\n• Lean UX methodology"},{id:4,title:"DevOps Engineer",company:"CloudScale — Pune",salary:"₹16-26 LPA",type:"Remote",tags:["Docker","Kubernetes","AWS","Terraform"],description:"DEVOPS ENGINEER\nCompany: CloudScale — Pune (Remote) | Salary: ₹16-26 LPA\n\nREQUIREMENTS\n• 3+ years of DevOps/SRE experience\n• Expert in Docker and Kubernetes orchestration\n• Strong AWS (EC2, ECS, EKS, Lambda, CloudFormation)\n• Infrastructure as Code (Terraform, Ansible)\n• CI/CD tools (Jenkins, GitHub Actions, GitLab CI)\n• Linux administration\n• Monitoring: Prometheus, Grafana, ELK stack\n• Scripting in Bash, Python, or Go\n\nNICE TO HAVE\n• Service mesh (Istio)\n• GitOps (ArgoCD, Flux)\n• AWS Solutions Architect certification"},{id:5,title:"React Native Developer",company:"MobileFirst — Delhi",salary:"₹12-20 LPA",type:"Hybrid",tags:["React Native","JavaScript","iOS","Android"],description:"REACT NATIVE DEVELOPER\nCompany: MobileFirst — Delhi (Hybrid) | Salary: ₹12-20 LPA\n\nREQUIREMENTS\n• 2+ years of React Native development\n• Strong JavaScript and TypeScript skills\n• Experience publishing apps to App Store and Play Store\n• Native modules and bridging (iOS/Android)\n• Redux or MobX state management\n• REST APIs and GraphQL\n• Push notifications and deep linking\n• Jest and Detox testing\n\nNICE TO HAVE\n• Native iOS (Swift) or Android (Kotlin)\n• Firebase services\n• Animations (Reanimated, Lottie)"},{id:6,title:"Data Analyst",company:"InsightCorp — Chennai",salary:"₹8-15 LPA",type:"On-site",tags:["SQL","Python","Tableau","Excel"],description:"DATA ANALYST\nCompany: InsightCorp — Chennai (On-site) | Salary: ₹8-15 LPA\n\nREQUIREMENTS\n• 2+ years of data analysis experience\n• Advanced SQL skills\n• Python (Pandas, NumPy) or R\n• Tableau or Power BI dashboards\n• Strong Excel skills\n• Statistical analysis and hypothesis testing\n• Data cleaning and ETL processes\n\nNICE TO HAVE\n• Google Analytics\n• A/B testing methodology\n• Basic machine learning knowledge"},{id:7,title:"Backend Engineer (Java)",company:"FinServ Technologies — Bangalore",salary:"₹20-32 LPA",type:"Hybrid",tags:["Java","Spring Boot","Microservices","Kafka"],description:"BACKEND ENGINEER (JAVA)\nCompany: FinServ Technologies — Bangalore (Hybrid) | Salary: ₹20-32 LPA\n\nREQUIREMENTS\n• 4+ years backend development with Java\n• Expert in Spring Boot and Spring Framework\n• Microservices architecture\n• Apache Kafka and message queues\n• Strong SQL (PostgreSQL, Oracle)\n• Redis caching\n• RESTful API design patterns\n• Docker and Kubernetes\n• CI/CD and Jenkins\n• SOLID principles and design patterns\n\nNICE TO HAVE\n• Event-driven architecture\n• GraphQL\n• AWS/GCP cloud experience"},{id:8,title:"Cybersecurity Analyst",company:"SecureNet — Hyderabad",salary:"₹14-24 LPA",type:"On-site",tags:["SIEM","Pen Testing","Firewall","SOC"],description:"CYBERSECURITY ANALYST\nCompany: SecureNet — Hyderabad (On-site) | Salary: ₹14-24 LPA\n\nREQUIREMENTS\n• 3+ years in cybersecurity\n• SIEM tools (Splunk, QRadar, Sentinel)\n• Penetration testing and vulnerability assessment\n• Firewalls, IDS/IPS, network security\n• OWASP Top 10 and secure coding\n• Compliance frameworks (ISO 27001, SOC 2, GDPR)\n• Incident response procedures\n• Endpoint security solutions\n\nNICE TO HAVE\n• CEH, CISSP, CompTIA Security+\n• Cloud security (AWS, Azure)\n• Threat hunting and malware analysis"},{id:9,title:"Frontend Developer (Vue.js)",company:"WebCraft — Gurgaon",salary:"₹10-18 LPA",type:"Remote",tags:["Vue.js","JavaScript","CSS","Nuxt.js"],description:"FRONTEND DEVELOPER (VUE.JS)\nCompany: WebCraft — Gurgaon (Remote) | Salary: ₹10-18 LPA\n\nREQUIREMENTS\n• 2+ years frontend with Vue.js\n• Strong JavaScript and TypeScript\n• Nuxt.js for SSR\n• HTML5, CSS3, SCSS/SASS\n• Vuex or Pinia state management\n• REST APIs and Axios/Fetch\n• Unit testing (Vitest, Jest)\n• Responsive design, Tailwind, Bootstrap\n• Git and version control\n\nNICE TO HAVE\n• Storybook\n• Web performance optimization\n• PWA development\n• Figma design handoff"},{id:10,title:"AI/LLM Engineer",company:"GenAI Labs — Bangalore",salary:"₹25-45 LPA",type:"Remote",tags:["Python","LLMs","RAG","LangChain"],description:"AI/LLM ENGINEER\nCompany: GenAI Labs — Bangalore (Remote) | Salary: ₹25-45 LPA\n\nREQUIREMENTS\n• 3+ years AI/ML engineering\n• LLM architectures (GPT, LLaMA, Mistral)\n• LangChain, LlamaIndex frameworks\n• Python and async programming\n• RAG (Retrieval Augmented Generation) systems\n• Vector databases (Pinecone, Weaviate, ChromaDB)\n• Prompt engineering and fine-tuning\n• Cloud deployment (AWS, GCP)\n• Embeddings and semantic search\n\nNICE TO HAVE\n• Multi-agent systems (CrewAI, AutoGen)\n• Model quantization and optimization\n• Hugging Face ecosystem"}];
 
+function escapeHtml(value){return String(value??'').replace(/[&<>\"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[char]))}
+function safeCssColor(value){return typeof value==='string'&&/^#[0-9a-f]{3,8}$/i.test(value)?value:'var(--primary)'}
+
 let selectedJobId=null,uploadedResumeText='';
 
 function renderJobs(jobs){
     const list=document.getElementById('jobList');
-    list.innerHTML=jobs.map(j=>`<div class="job-card ${selectedJobId===j.id?'selected':''}" onclick="selectJob(${j.id})"><div class="job-title"><span class="radio-dot"></span>${j.title}</div><div class="job-company">${j.company} · ${j.salary} · ${j.type}</div><div class="job-tags">${j.tags.map(t=>`<span class="job-tag">${t}</span>`).join('')}</div></div>`).join('');
+    list.innerHTML=jobs.map(j=>`<div class="job-card ${selectedJobId===j.id?'selected':''}" onclick="selectJob(${Number(j.id)})"><div class="job-title"><span class="radio-dot"></span>${escapeHtml(j.title)}</div><div class="job-company">${escapeHtml(j.company)} · ${escapeHtml(j.salary)} · ${escapeHtml(j.type)}</div><div class="job-tags">${j.tags.map(t=>`<span class="job-tag">${escapeHtml(t)}</span>`).join('')}</div></div>`).join('');
     document.getElementById('jobCount').textContent=`${jobs.length} jobs`;
 }
 
@@ -249,27 +257,29 @@ function filterJobs(){renderJobs(getFilteredJobs())}
 function toggleCustomJob(){const a=document.getElementById('customJobArea');a.classList.toggle('visible');if(a.classList.contains('visible')){selectedJobId=null;renderJobs(getFilteredJobs())}}
 
 const uploadZone=document.getElementById('uploadZone'),fileInput=document.getElementById('fileInput');
+const maxResumeBytes=1024*1024;
 uploadZone.addEventListener('dragover',e=>{e.preventDefault();uploadZone.classList.add('dragover')});
 uploadZone.addEventListener('dragleave',()=>uploadZone.classList.remove('dragover'));
 uploadZone.addEventListener('drop',e=>{e.preventDefault();uploadZone.classList.remove('dragover');if(e.dataTransfer.files.length)handleFile(e.dataTransfer.files[0])});
 fileInput.addEventListener('change',e=>{if(e.target.files.length)handleFile(e.target.files[0])});
 
+function setFileError(message){const error=document.getElementById('fileError');error.textContent=message;error.classList.toggle('visible',Boolean(message))}
 function handleFile(file){
-    const name=file.name,ext=name.split('.').pop().toLowerCase();
+    if(!file)return;
+    const name=file.name;
+    if(!/\.txt$/i.test(name)){setFileError('Only plain-text .txt files are supported. For PDF or Word resumes, copy the text and paste it below.');fileInput.value='';return}
+    if(file.size>maxResumeBytes){setFileError('This file exceeds the 1 MB limit. Paste a shorter text version instead.');fileInput.value='';return}
+    setFileError('');
     document.getElementById('fileName').textContent=name;
     document.getElementById('fileInfo').classList.add('visible');
     uploadZone.classList.add('has-file');
-    if(ext==='txt'||ext==='rtf'){
-        const r=new FileReader();r.onload=e=>{uploadedResumeText=e.target.result;document.getElementById('resumeInput').value=uploadedResumeText;updateSteps()};r.readAsText(file);
-    }else{
-        const r=new FileReader();r.onload=e=>{
-            try{const u=new Uint8Array(e.target.result);let t='';for(let i=0;i<u.length;i++){const c=u[i];if((c>=32&&c<=126)||c===10||c===13)t+=String.fromCharCode(c)}t=t.replace(/\s+/g,' ').trim();if(t.length>50){uploadedResumeText=t;document.getElementById('resumeInput').value=t}else{document.getElementById('resumeInput').placeholder='File loaded: "'+name+'"\n\nFor best results, also paste the text content below.'}}catch(ex){}
-            updateSteps();
-        };r.readAsArrayBuffer(file);
-    }
+    const r=new FileReader();
+    r.onload=e=>{if(typeof e.target.result!=='string'){setFileError('Could not read this file as text.');return}uploadedResumeText=e.target.result;document.getElementById('resumeInput').value=uploadedResumeText;updateSteps()};
+    r.onerror=()=>setFileError('Could not read this file. Try a UTF-8 .txt file or paste the text below.');
+    r.readAsText(file,'UTF-8');
 }
 
-function removeFile(){fileInput.value='';uploadedResumeText='';document.getElementById('fileInfo').classList.remove('visible');uploadZone.classList.remove('has-file');document.getElementById('resumeInput').value='';updateSteps()}
+function removeFile(){fileInput.value='';uploadedResumeText='';setFileError('');document.getElementById('fileInfo').classList.remove('visible');uploadZone.classList.remove('has-file');document.getElementById('resumeInput').value='';updateSteps()}
 
 function updateSteps(){
     const hasResume=document.getElementById('resumeInput').value.trim().length>20;
@@ -308,7 +318,7 @@ function analyzeMatch(rt,jt){
 }
 
 function getScoreColor(s){if(s>=80)return'#00b894';if(s>=60)return'#fdcb6e';if(s>=40)return'#e17055';return'#d63031'}
-function getVerdict(s){if(s>=85)return{text:'🎯 Excellent Match!',desc:'Your profile is highly aligned. Apply with confidence!'};if(s>=70)return{text:'✅ Strong Match',desc:'Good alignment. A few gaps, but you are a competitive candidate.'};if(s>=55)return{text:'⚡ Moderate Match',desc:'Decent overlap, but key skills missing. Consider upskilling.'};if(s>=35)return{text:'⚠️ Partial Match',desc:'Significant gaps. This role may require skills outside your experience.'};return{text:'❌ Low Match',desc:'This role does not align well with your current profile.'}}
+function getVerdict(s){const desc='This local score counts shared keywords only. It is not an ATS result, a hiring prediction, or proof of role fit. Check every requirement against the official posting.';if(s>=85)return{text:'High keyword overlap',desc};if(s>=70)return{text:'Strong keyword overlap',desc};if(s>=55)return{text:'Some keyword overlap',desc};if(s>=35)return{text:'Limited keyword overlap',desc};return{text:'Low keyword overlap',desc}}
 
 function animateScore(target){
     const el=document.getElementById('scoreNum'),ring=document.getElementById('scoreRing'),circ=2*Math.PI*90;
@@ -321,14 +331,14 @@ function renderBreakdown(cats){
     const c=document.getElementById('breakdownList');c.innerHTML='';
     cats.sort((a,b)=>b.required-a.required).forEach(cat=>{
         const d=document.createElement('div');d.className='category-item';
-        d.innerHTML=`<div class="category-header"><span class="category-name"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${cat.color}"></span>${cat.name}</span><span class="category-score" style="color:${getScoreColor(cat.score)}">${cat.score}%</span></div><div class="progress-track"><div class="progress-fill" style="background:${cat.color}" data-width="${cat.score}"></div></div><div class="category-tags">${cat.matched.map(k=>`<span class="tag matched">✓ ${k}</span>`).join('')}${cat.missing.map(k=>`<span class="tag missing">✗ ${k}</span>`).join('')}${cat.extra.map(k=>`<span class="tag partial">+ ${k}</span>`).join('')}</div>`;
+        d.innerHTML=`<div class="category-header"><span class="category-name"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${safeCssColor(cat.color)}"></span>${escapeHtml(cat.name)}</span><span class="category-score" style="color:${getScoreColor(cat.score)}">${cat.score}%</span></div><div class="progress-track"><div class="progress-fill" style="background:${safeCssColor(cat.color)}" data-width="${cat.score}"></div></div><div class="category-tags">${cat.matched.map(k=>`<span class="tag matched">✓ ${escapeHtml(k)}</span>`).join('')}${cat.missing.map(k=>`<span class="tag missing">✗ ${escapeHtml(k)}</span>`).join('')}${cat.extra.map(k=>`<span class="tag partial">+ ${escapeHtml(k)}</span>`).join('')}</div>`;
         c.appendChild(d);
     });
     setTimeout(()=>{document.querySelectorAll('.progress-fill').forEach(b=>{b.style.width=b.dataset.width+'%'})},200);
 }
 
 function renderDetailPanels(r){
-    document.getElementById('detailPanels').innerHTML=`<div class="detail-panel"><h4><span style="color:var(--success)">✅</span> Matched (${r.allMatched.length})</h4><ul class="detail-list">${r.allMatched.slice(0,12).map(s=>`<li><span class="check">✓</span> ${s}</li>`).join('')}${r.allMatched.length>12?`<li style="color:var(--text-muted)">+${r.allMatched.length-12} more</li>`:''}</ul></div><div class="detail-panel"><h4><span style="color:var(--danger)">❌</span> Missing (${r.allMissing.length})</h4><ul class="detail-list">${r.allMissing.slice(0,12).map(s=>`<li><span class="cross">✗</span> ${s}</li>`).join('')}${r.allMissing.length>12?`<li style="color:var(--text-muted)">+${r.allMissing.length-12} more</li>`:''}</ul></div><div class="detail-panel"><h4><span style="color:var(--warning)">➕</span> Bonus (${r.allExtra.length})</h4><ul class="detail-list">${r.allExtra.slice(0,12).map(s=>`<li><span class="warn">★</span> ${s}</li>`).join('')}${r.allExtra.length>12?`<li style="color:var(--text-muted)">+${r.allExtra.length-12} more</li>`:''}</ul></div>`;
+    document.getElementById('detailPanels').innerHTML=`<div class="detail-panel"><h4><span style="color:var(--success)">✅</span> Matched (${r.allMatched.length})</h4><ul class="detail-list">${r.allMatched.slice(0,12).map(s=>`<li><span class="check">✓</span> ${escapeHtml(s)}</li>`).join('')}${r.allMatched.length>12?`<li style="color:var(--text-muted)">+${r.allMatched.length-12} more</li>`:''}</ul></div><div class="detail-panel"><h4><span style="color:var(--danger)">❌</span> Missing (${r.allMissing.length})</h4><ul class="detail-list">${r.allMissing.slice(0,12).map(s=>`<li><span class="cross">✗</span> ${escapeHtml(s)}</li>`).join('')}${r.allMissing.length>12?`<li style="color:var(--text-muted)">+${r.allMissing.length-12} more</li>`:''}</ul></div><div class="detail-panel"><h4><span style="color:var(--warning)">➕</span> Bonus (${r.allExtra.length})</h4><ul class="detail-list">${r.allExtra.slice(0,12).map(s=>`<li><span class="warn">★</span> ${escapeHtml(s)}</li>`).join('')}${r.allExtra.length>12?`<li style="color:var(--text-muted)">+${r.allExtra.length-12} more</li>`:''}</ul></div>`;
 }
 
 function renderRecs(r){
@@ -339,7 +349,7 @@ function renderRecs(r){
     if(r.experience.score<100)recs.push({type:'improve',title:'Experience Gap',text:`Job needs ${r.experience.required}+ yrs, you have ${r.experience.resume}. Highlight project impact.`});
     if(r.allExtra.length>0)recs.push({type:'strength',title:'Bonus Skills',text:`${r.allExtra.length} extra skills (${r.allExtra.slice(0,3).join(', ')}) add value.`});
     if(r.overallScore<70)recs.push({type:'improve',title:'Resume Tip',text:"Mirror the job description's exact keywords for better ATS matching."});
-    document.getElementById('recGrid').innerHTML=recs.map(r=>`<div class="rec-item ${r.type}"><div class="rec-title">${r.title}</div>${r.text}</div>`).join('');
+    document.getElementById('recGrid').innerHTML=recs.map(r=>`<div class="rec-item ${r.type}"><div class="rec-title">${escapeHtml(r.title)}</div>${escapeHtml(r.text)}</div>`).join('');
 }
 
 function renderStats(r){
